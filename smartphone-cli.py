@@ -63,11 +63,23 @@ def reboot_device(device_serial):
         print("❌ Errore durante il riavvio del dispositivo.")
         print(f"⚠️  Messaggio: {e}")
 
+def check_device_status(device_serial):
+    """Check and print the current airplane mode status without changing it."""
+    print("📱 Verifica dello stato del dispositivo...")
+    status = get_airplane_mode_status(device_serial)
+    if "enabled" in status:
+        print("✈️ Stato: Modalità aereo ATTIVA")
+    elif "disabled" in status:
+        print("📶 Stato: Modalità aereo DISATTIVATA")
+    else:
+        print("❓ Stato: Modalità aereo SCONOSCIUTA")
+
 def main():
     parser = argparse.ArgumentParser(description="Controllo ADB: modalità aereo o reboot del telefono.")
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("-a", "--airplane", action="store_true", help="Abilita/disabilita la modalità aereo")
     group.add_argument("-r", "--reboot", action="store_true", help="Riavvia il dispositivo")
+    group.add_argument("-s", "--status", action="store_true", help="Verifica lo stato della modalità aereo")
     parser.add_argument("--id", type=str, help="Seriale del dispositivo (facoltativo)")
 
     args = parser.parse_args()
@@ -78,6 +90,8 @@ def main():
         auto_toggle_airplane_mode(device_serial)
     elif args.reboot:
         reboot_device(device_serial)
+    elif args.status:
+        check_device_status(device_serial)
 
 if __name__ == "__main__":
     main()

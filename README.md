@@ -17,14 +17,18 @@ The `smartphone-cli.py` script provides a simple command-line interface to manag
 ### Features
 
 - Toggle airplane mode on/off
+- Check airplane mode status
 - Reboot devices
 - Support for multiple connected devices
 
 ### Usage
 
 ```bash
-# Toggle airplane mode on/offss
+# Toggle airplane mode on/off
 python smartphone-cli.py -a [--id DEVICE_ID]
+
+# Check airplane mode status
+python smartphone-cli.py -s [--id DEVICE_ID]
 
 # Reboot a device
 python smartphone-cli.py -r [--id DEVICE_ID]
