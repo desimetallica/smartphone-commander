@@ -76,24 +76,21 @@ def check_device_status(device_serial):
     else:
         print("❓ Stato: Modalità aereo SCONOSCIUTA")
 
-import subprocess
-import re
-
 def monitor_connectivity_type(device_serial):
     print("📡 Verifica dello stato della connessione dati...")
 
-    # Mapping numerico (se presente)
+    # Mappa dei valori numerici
     network_type_map = {
         20: "5G (NR)",
-        19: "LTE_CA",
+        19: "4G+ (LTE_CA)",
         13: "4G (LTE)",
-        10: "HSPA",
+        10: "3G (HSPA)",
         3: "3G (UMTS)",
         1: "2G (GPRS)",
         0: "UNKNOWN"
     }
 
-    # Mapping testuale
+    # Mappa stringhe testuali
     string_type_map = {
         "NR": "5G (NR)",
         "LTE": "4G (LTE)",
@@ -112,31 +109,37 @@ def monitor_connectivity_type(device_serial):
             stderr=subprocess.DEVNULL
         )
 
-        # Prova a cercare numerico
-        net_type_match = re.findall(r"mDataNetworkType=(\d+)", output)
-        if net_type_match:
-            net_type = int(net_type_match[-1])
-            print(f"🌐 Rete rilevata (numerica): {network_type_map.get(net_type, f'Altro ({net_type})')}")
-            return
+        # Cerca valori numerici noti
+        num_fields = [
+            r"mDataNetworkType=(\d+)",
+            r"getDataNetworkType=(\d+)",
+            r"DataNetworkType=(\d+)",
+        ]
+        for pattern in num_fields:
+            match = re.findall(pattern, output)
+            if match:
+                value = int(match[-1])
+                print(f"🌐 Connettività attuale: {network_type_map.get(value, f'Altro ({value})')}")
+                return
 
-        # Prova a cercare testuale (forma 1)
-        net_type_str = re.findall(r"mNetworkType=([A-Z_]+)", output)
-        if net_type_str:
-            print(f"🌐 Rete rilevata (testuale): {string_type_map.get(net_type_str[-1], net_type_str[-1])}")
-            return
+        # Cerca stringhe descrittive
+        str_fields = [
+            r"mNetworkType=([A-Z_]+)",
+            r"accessNetworkTechnology=([A-Z_]+)",
+            r"dataNetworkType=([A-Z_]+)",
+            r"type=([A-Z_]+)",  # e.g., type=NR in mServiceState
+        ]
+        for pattern in str_fields:
+            match = re.findall(pattern, output)
+            if match:
+                net_type = match[-1].strip().upper()
+                print(f"🌐 Connettività attuale: {string_type_map.get(net_type, net_type)}")
+                return
 
-        # Prova a cercare testuale (forma 2)
-        access_tech = re.findall(r"accessNetworkTechnology=([A-Z_]+)", output)
-        if access_tech:
-            print(f"🌐 accessNetworkTechnology: {string_type_map.get(access_tech[-1], access_tech[-1])}")
-            return
-
-        print("❌ Nessuna informazione di rete trovata.")
+        print("❌ Impossibile determinare lo stato della connessione.")
 
     except subprocess.CalledProcessError as e:
         print(f"❌ Errore durante l'esecuzione di adb: {e}")
-
-
 
 def main():
     parser = argparse.ArgumentParser(description="Controllo ADB: modalità aereo, reboot, stato o tipo di rete.")
