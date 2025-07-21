@@ -79,18 +79,6 @@ def check_device_status(device_serial):
 def monitor_connectivity_type(device_serial):
     print("📡 Verifica dello stato della connessione dati...")
 
-    # Mappa dei valori numerici
-    network_type_map = {
-        20: "5G (NR)",
-        19: "4G+ (LTE_CA)",
-        13: "4G (LTE)",
-        10: "3G (HSPA)",
-        3: "3G (UMTS)",
-        1: "2G (GPRS)",
-        0: "UNKNOWN"
-    }
-
-    # Mappa stringhe testuali
     string_type_map = {
         "NR": "5G (NR)",
         "LTE": "4G (LTE)",
@@ -98,8 +86,7 @@ def monitor_connectivity_type(device_serial):
         "HSPA": "3G (HSPA)",
         "UMTS": "3G (UMTS)",
         "EDGE": "2G (EDGE)",
-        "GPRS": "2G (GPRS)",
-        "UNKNOWN": "Sconosciuto"
+        "GPRS": "2G (GPRS)"
     }
 
     try:
@@ -109,34 +96,14 @@ def monitor_connectivity_type(device_serial):
             stderr=subprocess.DEVNULL
         )
 
-        # Cerca valori numerici noti
-        num_fields = [
-            r"mDataNetworkType=(\d+)",
-            r"getDataNetworkType=(\d+)",
-            r"DataNetworkType=(\d+)",
-        ]
-        for pattern in num_fields:
-            match = re.findall(pattern, output)
-            if match:
-                value = int(match[-1])
-                print(f"🌐 Connettività attuale: {network_type_map.get(value, f'Altro ({value})')}")
-                return
-
-        # Cerca stringhe descrittive
-        str_fields = [
-            r"mNetworkType=([A-Z_]+)",
-            r"accessNetworkTechnology=([A-Z_]+)",
-            r"dataNetworkType=([A-Z_]+)",
-            r"type=([A-Z_]+)",  # e.g., type=NR in mServiceState
-        ]
-        for pattern in str_fields:
-            match = re.findall(pattern, output)
-            if match:
-                net_type = match[-1].strip().upper()
-                print(f"🌐 Connettività attuale: {string_type_map.get(net_type, net_type)}")
-                return
-
-        print("❌ Impossibile determinare lo stato della connessione.")
+        # Trova tutte le occorrenze di accessNetworkTechnology
+        matches = re.findall(r"accessNetworkTechnology=([A-Z_]+)", output)
+        if matches:
+            latest = matches[-1].strip().upper()
+            result = string_type_map.get(latest, "Sconosciuto")
+            print(f"🌐 Connettività attuale: {result}")
+        else:
+            print("❌ Campo 'accessNetworkTechnology' non trovato.")
 
     except subprocess.CalledProcessError as e:
         print(f"❌ Errore durante l'esecuzione di adb: {e}")
