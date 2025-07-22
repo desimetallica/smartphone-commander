@@ -35,7 +35,7 @@ def get_airplane_mode_status(device):
         sys.exit(1)
 
 def set_airplane_mode(device, enable: bool):
-    state = "enable" if enable else "disable"
+    state = "abilitata" if enable else "disabilitata"
     try:
         subprocess.run(
             ["adb", "-s", device, "shell", "cmd", "connectivity", "airplane-mode", state],
@@ -48,17 +48,17 @@ def set_airplane_mode(device, enable: bool):
 
 def auto_toggle_airplane_mode(device):
     status = get_airplane_mode_status(device)
-    if "enabled" in status:
+    if "abilitata" in status:
         print("📴 Modalità aereo già abilitata ➡ disabilitazione...")
         set_airplane_mode(device, False)
-    elif "disabled" in status:
+    elif "disabilitata" in status:
         print("📶 Modalità aereo disattivata ➡ abilitazione...")
         set_airplane_mode(device, True)
     else:
         print("⚠️ Stato modalità aereo non riconosciuto.")
 
 def reboot_device(device_serial):
-    print("🔄 Avvio del riavvio del dispositivo...")
+    print("🔄 Riavvio del dispositivo in corso...")
     try:
         subprocess.run(["adb", "-s", device_serial, "reboot"], check=True)
         print("✅ Riavvio eseguito correttamente.")
@@ -67,18 +67,13 @@ def reboot_device(device_serial):
         print(f"⚠️  Messaggio: {e}")
 
 def check_device_status(device_serial):
-    print("📱 Verifica dello stato del dispositivo...")
+    # Get airplane mode status (this already prints the status)
     status = get_airplane_mode_status(device_serial)
-    if "enabled" in status:
-        print("✈️ Stato: Modalità aereo ATTIVA")
-    elif "disabled" in status:
-        print("📶 Stato: Modalità aereo DISATTIVATA")
-    else:
-        print("❓ Stato: Modalità aereo SCONOSCIUTA")
+    
+    # Get connectivity type
+    monitor_connectivity_type(device_serial)
 
 def monitor_connectivity_type(device_serial):
-    print("📡 Verifica dello stato della connessione dati...")
-
     string_type_map = {
         "NR": "5G (NR)",
         "LTE": "4G (LTE)",
