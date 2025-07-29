@@ -7,7 +7,14 @@ import re
 import argparse
 
 class DeviceManager:
-    def __init__(self, logfile_path="smartphone-cli.log"):
+    def list_devices(self):
+        self.log("Listing all connected devices:")
+        for idx, dev in enumerate(self.devices):
+            info = self.get_device_info(dev)
+            # print(f"[{idx}] {dev} | Brand: {info['brand']} | Device: {info['device']} | Name: {info['name']}")
+            self.log(f"Device {dev} | Brand: {info['brand']} | Device: {info['device']} | Name: {info['name']}")
+    
+    def __init__(self, logfile_path="/tmp/smartphone-cli.log"):
         self.logfile_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), logfile_path)
         self.devices = self.get_connected_devices()
 
@@ -30,26 +37,43 @@ class DeviceManager:
             devices = [line.split()[0] for line in lines if "\tdevice" in line]
             if not devices:
                 self.log("No device connected via ADB.")
-                sys.exit(1)
+                # sys.exit(1)
             return devices
         except subprocess.CalledProcessError:
             self.log("Error running 'adb devices'.")
-            sys.exit(1)
+            # sys.exit(1)
+
+    def get_device_info(self, device):
+        def get_prop(prop):
+            try:
+                return subprocess.check_output([
+                    "adb", "-s", device, "shell", "getprop", prop
+                ], encoding="utf-8").strip()
+            except Exception:
+                return "Unknown"
+        return {
+            "brand": get_prop("ro.product.brand"),
+            "device": get_prop("ro.product.device"),
+            "name": get_prop("ro.product.name")
+        }
 
     def select_device(self, device_id=None):
         if device_id and device_id in self.devices:
-            self.log(f"Using device: {device_id}")
+            info = self.get_device_info(device_id)
+            self.log(f"Using device: {device_id} | Brand: {info['brand']} | Device: {info['device']} | Name: {info['name']}")
             return device_id
         elif device_id and device_id not in self.devices:
             self.log(f"Device {device_id} not found among connected devices.")
             sys.exit(1)
         if len(self.devices) == 1:
-            self.log(f"One device found: {self.devices[0]}")
+            info = self.get_device_info(self.devices[0])
+            self.log(f"One device found: {self.devices[0]} | Brand: {info['brand']} | Device: {info['device']} | Name: {info['name']}")
             return self.devices[0]
         else:
             self.log("Multiple devices found:")
             for idx, dev in enumerate(self.devices):
-                print(f"[{idx}] {dev}")
+                info = self.get_device_info(dev)
+                print(f"[{idx}] {dev} | Brand: {info['brand']} | Device: {info['device']} | Name: {info['name']}")
             while True:
                 try:
                     choice = input("Select device by number: ")
@@ -108,6 +132,8 @@ class DeviceManager:
             self.log(f"Message: {e}")
 
     def check_device_status(self, device):
+        info = self.get_device_info(device)
+        self.log(f"Device info: Serial: {device} | Brand: {info['brand']} | Device: {info['device']} | Name: {info['name']}")
         self.log("Checking device status...")
         self.get_airplane_mode_status(device)
         self.monitor_connectivity_type(device)
@@ -141,15 +167,30 @@ class DeviceManager:
 
 def main():
     parser = argparse.ArgumentParser(description="ADB Control: airplane mode, reboot, status or network type.")
-    group = parser.add_mutually_exclusive_group(required=True)
+    group = parser.add_mutually_exclusive_group()
     group.add_argument("-a", "--airplane", action="store_true", help="Enable/disable airplane mode")
     group.add_argument("-r", "--reboot", action="store_true", help="Reboot device")
     group.add_argument("-s", "--status", action="store_true", help="Check airplane mode status")
     group.add_argument("-c", "--connectivity_type", action="store_true", help="Check current network type")
+    group.add_argument("-l", "--list", action="store_true", help="List all connected devices with brand info")
     parser.add_argument("--id", type=str, help="Device serial (optional)")
 
     args = parser.parse_args()
     manager = DeviceManager()
+
+    # If no arguments are passed, list devices by default
+    if not any(vars(args).values()):
+        if not manager.devices:
+            print("No devices connected.")
+            parser.print_help()
+            return
+        manager.list_devices()
+        return
+
+    if args.list:
+        manager.list_devices()
+        return
+
     device_serial = manager.select_device(args.id)
 
     if args.airplane:
