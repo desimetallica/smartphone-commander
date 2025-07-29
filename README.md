@@ -21,9 +21,16 @@ The `smartphone-cli.py` script provides a simple command-line interface to manag
 - Reboot devices
 - Support for multiple connected devices
 
+
 ### Usage
 
 ```bash
+# List all connected devices (default behavior)
+python smartphone-cli.py
+
+# List all connected devices (explicit)
+python smartphone-cli.py -l
+
 # Toggle airplane mode on/off
 python smartphone-cli.py -a [--id DEVICE_ID]
 
@@ -37,7 +44,9 @@ python smartphone-cli.py -r [--id DEVICE_ID]
 python smartphone-cli.py -h
 ```
 
-If no device ID is specified, the tool will automatically use the first connected device.
+If no device ID is specified, the tool will prompt for selection if multiple devices are connected, or use the only device if just one is present.
+
+If no devices are connected, the tool will print "No devices connected." and show the help message.
 
 ## 📡 Mobile Network Operator (MNO) Data Tools
 
