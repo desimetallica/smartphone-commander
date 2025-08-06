@@ -5,15 +5,11 @@ import subprocess
 import sys
 import re
 import argparse
+from rich.console import Console
+from rich.table import Table
 
 class DeviceManager:
-    def list_devices(self):
-        self.log("Listing all connected devices:")
-        for idx, dev in enumerate(self.devices):
-            info = self.get_device_info(dev)
-            # print(f"[{idx}] {dev} | Brand: {info['brand']} | Device: {info['device']} | Name: {info['name']}")
-            self.log(f"Device {dev} | Brand: {info['brand']} | Device: {info['device']} | Name: {info['name']}")
-    
+
     def __init__(self, logfile_path="/tmp/smartphone-cli.log"):
         self.logfile_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), logfile_path)
         self.devices = self.get_connected_devices()
@@ -29,6 +25,22 @@ class DeviceManager:
         with open(self.logfile_path, "a") as f:
             f.write(log_line + "\n")
         print(log_line)
+
+    def list_devices(self):
+        console = Console()
+        self.log("Listing all connected devices:")
+        table = Table(title="Connected Devices")
+        table.add_column("Index", style="cyan", justify="right")
+        table.add_column("Serial", style="magenta")
+        table.add_column("Brand", style="green")
+        table.add_column("Device", style="yellow")
+        table.add_column("Name", style="white")
+        table.add_column("Model", style="blue")
+        for idx, dev in enumerate(self.devices):
+            info = self.get_device_info(dev)
+            table.add_row(str(idx), dev, info['brand'], info['device'], info['name'], info['model'])
+            self.log(f"Device {dev} | Brand: {info['brand']} | Device: {info['device']} | Name: {info['name']} | Model: {info['model']}")
+        console.print(table)
 
     def get_connected_devices(self):
         try:
@@ -54,26 +66,38 @@ class DeviceManager:
         return {
             "brand": get_prop("ro.product.brand"),
             "device": get_prop("ro.product.device"),
-            "name": get_prop("ro.product.name")
+            "name": get_prop("ro.product.name"),
+            "model": get_prop("ro.product.model")
         }
 
     def select_device(self, device_id=None):
+        console = Console()
         if device_id and device_id in self.devices:
             info = self.get_device_info(device_id)
-            self.log(f"Using device: {device_id} | Brand: {info['brand']} | Device: {info['device']} | Name: {info['name']}")
+            self.log(f"Using device: {device_id} | Brand: {info['brand']} | Device: {info['device']} | Name: {info['name']} | Model: {info['model']}")
             return device_id
         elif device_id and device_id not in self.devices:
             self.log(f"Device {device_id} not found among connected devices.")
             sys.exit(1)
         if len(self.devices) == 1:
             info = self.get_device_info(self.devices[0])
-            self.log(f"One device found: {self.devices[0]} | Brand: {info['brand']} | Device: {info['device']} | Name: {info['name']}")
+            self.log(f"One device found: {self.devices[0]} | Brand: {info['brand']} | Device: {info['device']} | Name: {info['name']} | Model: {info['model']}")
             return self.devices[0]
         else:
             self.log("Multiple devices found:")
+            table = Table(title="Connected Devices")
+            table.add_column("Index", style="cyan", justify="right")
+            table.add_column("Serial", style="magenta")
+            table.add_column("Brand", style="green")
+            table.add_column("Device", style="yellow")
+            table.add_column("Name", style="white")
+            table.add_column("Model", style="blue")
+            device_infos = []
             for idx, dev in enumerate(self.devices):
                 info = self.get_device_info(dev)
-                print(f"[{idx}] {dev} | Brand: {info['brand']} | Device: {info['device']} | Name: {info['name']}")
+                device_infos.append(info)
+                table.add_row(str(idx), dev, info['brand'], info['device'], info['name'], info['model'])
+            console.print(table)
             while True:
                 try:
                     choice = input("Select device by number: ")
