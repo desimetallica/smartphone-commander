@@ -10,7 +10,7 @@ from rich.table import Table
 
 class DeviceManager:
 
-    def __init__(self, logfile_path="/tmp/smartphone-cli.log"):
+    def __init__(self, logfile_path="/tmp/smartphone_cli.log"):
         self.logfile_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), logfile_path)
         self.devices = self.get_connected_devices()
 
