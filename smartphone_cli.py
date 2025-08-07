@@ -100,7 +100,7 @@ class DeviceManager:
             console.print(table)
             while True:
                 try:
-                    choice = input("Select device by number: ")
+                    choice = input("Select device index: ")
                     idx = int(choice)
                     if 0 <= idx < len(self.devices):
                         self.log(f"Selected device: {self.devices[idx]}")
@@ -108,7 +108,7 @@ class DeviceManager:
                     else:
                         print("Invalid selection. Try again.")
                 except ValueError:
-                    print("Please enter a valid number.")
+                    print("Please enter a valid index.")
 
     def get_airplane_mode_status(self, device):
         try:
@@ -155,12 +155,50 @@ class DeviceManager:
             self.log("Error rebooting device.")
             self.log(f"Message: {e}")
 
-    def check_device_status(self, device):
-        info = self.get_device_info(device)
-        self.log(f"Device info: Serial: {device} | Brand: {info['brand']} | Device: {info['device']} | Name: {info['name']}")
-        self.log("Checking device status...")
-        self.get_airplane_mode_status(device)
-        self.monitor_connectivity_type(device)
+    def check_device_status(self, device=None):
+        console = Console()
+        if device is not None:
+            info = self.get_device_info(device)
+            self.log(f"Device info: Serial: {device} | Brand: {info['brand']} | Device: {info['device']} | Name: {info['name']}")
+            self.log("Checking device status...")
+            self.get_airplane_mode_status(device)
+            self.monitor_connectivity_type(device)
+        else:
+            # Multiple devices: show table with status for all
+            table = Table(title="Devices Status")
+            table.add_column("Index", style="cyan", justify="right")
+            table.add_column("Serial", style="magenta")
+            table.add_column("Brand", style="green")
+            table.add_column("Device", style="yellow")
+            table.add_column("Name", style="white")
+            table.add_column("Model", style="blue")
+            table.add_column("Airplane Mode")
+            table.add_column("Connectivity", style="bright_cyan")
+            string_type_map = {
+                "NR": "5G (NR)",
+                "LTE": "4G (LTE)",
+                "LTE_CA": "4G+ (LTE CA)",
+                "HSPA": "3G (HSPA)",
+                "UMTS": "3G (UMTS)",
+                "EDGE": "2G (EDGE)",
+                "GPRS": "2G (GPRS)"
+            }
+            for idx, dev in enumerate(self.devices):
+                info = self.get_device_info(dev)
+                # Airplane mode
+                airplane = self.get_airplane_mode_status(dev)
+                # Connectivity
+                connectivity = self.monitor_connectivity_type(dev)
+                print(connectivity)
+                if airplane == "enabled":
+                    table.add_row(
+                        str(idx), dev, info['brand'], info['device'], info['name'], info['model'], "[red]" + airplane + "✈️[/red]", "[red]" + connectivity + "[/red]"
+                    )
+                else:
+                    table.add_row(
+                        str(idx), dev, info['brand'], info['device'], info['name'], info['model'], airplane, connectivity + "📡"
+                    )
+            console.print(table)
 
     def monitor_connectivity_type(self, device):
         self.log("Checking data connection status...")
@@ -184,6 +222,7 @@ class DeviceManager:
                 latest = matches[-1].strip().upper()
                 result = string_type_map.get(latest, "Unknown")
                 self.log(f"Current connectivity: {result}")
+                return result
             else:
                 self.log("Field 'accessNetworkTechnology' not found.")
         except subprocess.CalledProcessError as e:
@@ -215,14 +254,25 @@ def main():
         manager.list_devices()
         return
 
+    # For status: if multiple devices, show all statuses in table, else select device
+    if args.status:
+        if not manager.devices:
+            print("No devices connected.")
+            parser.print_help()
+            return
+        if len(manager.devices) == 1 or args.id:
+            device_serial = manager.select_device(args.id)
+            manager.check_device_status(device_serial)
+        else:
+            manager.check_device_status(device=None)
+        return
+
     device_serial = manager.select_device(args.id)
 
     if args.airplane:
         manager.auto_toggle_airplane_mode(device_serial)
     elif args.reboot:
         manager.reboot_device(device_serial)
-    elif args.status:
-        manager.check_device_status(device_serial)
     elif args.connectivity_type:
         manager.monitor_connectivity_type(device_serial)
 
